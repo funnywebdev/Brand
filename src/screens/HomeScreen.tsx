@@ -1,28 +1,32 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  ActivityIndicator, 
-  ToastAndroid, 
-  Platform, 
-  FlatList
+import React, {useEffect, useState, useCallback} from 'react';
+import {
+  StyleSheet,
+  View,
+  ActivityIndicator,
+  ToastAndroid,
+  Platform,
+  FlatList,
 } from 'react-native';
-import { 
-  Text, 
-  useTheme, 
-  Appbar, 
-  Surface, 
-  Button, 
+import {
+  Text,
+  useTheme,
+  Appbar,
+  Surface,
+  Button,
   Banner,
   Divider,
   Chip,
   Searchbar,
-  ProgressBar
+  ProgressBar,
 } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import RecordTable from '../components/RecordTable';
-import DatabaseService, { Record, PaginationParams, QueryResult } from '../services/DatabaseService';
-import { requestPermissions } from '../utils/PermissionsManager';
+import DatabaseService, {
+  Record,
+  PaginationParams,
+  QueryResult,
+} from '../services/DatabaseService';
+import {requestPermissions} from '../utils/PermissionsManager';
 
 // Default pagination parameters
 const DEFAULT_PAGE_SIZE = 25;
@@ -36,7 +40,7 @@ const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBanner, setShowBanner] = useState(false);
-  
+
   // Pagination state
   const [pagination, setPagination] = useState<{
     currentPage: number;
@@ -49,61 +53,70 @@ const HomeScreen: React.FC = () => {
     totalCount: 0,
     pageSize: DEFAULT_PAGE_SIZE,
   });
-  
+
   // Search state
   const [isSearching, setIsSearching] = useState(false);
 
   // Load initial data with pagination
-  const loadData = useCallback(async (resetPagination = true) => {
-    console.log('Starting to load data...');
-    try {
-      setError(null);
-      setLoading(true);
-      
-      const pageSize = pagination.pageSize;
-      console.log(`Loading initial data with page size: ${pageSize}`);
-      
-      // Initialize with first page of data
-      const result = await DatabaseService.getInitialData(pageSize);
-      console.log(`Data loaded. Records: ${result.records.length}, Total: ${result.totalCount}`);
-      
-      if (result.records.length === 0) {
-        // Show banner if no records found
-        console.log('No records found, showing banner');
-        setShowBanner(true);
-      } else {
-        console.log(`Setting ${result.records.length} records to state`);
-        setShowBanner(false);
-      }
-      
-      // Update the records state
-      setRecords(result.records);
-      
-      // Update pagination information
-      setPagination({
-        currentPage: result.currentPage,
-        totalPages: result.totalPages,
-        totalCount: result.totalCount,
-        pageSize: pageSize,
-      });
-      
-      // Show success toast with count information 
-      if (result.records.length > 0) {
-        ToastAndroid.show(
-          `Loaded ${result.records.length} of ${result.totalCount} records`, 
-          ToastAndroid.SHORT
+  const loadData = useCallback(
+    async (resetPagination = true) => {
+      console.log('Starting to load data...');
+      try {
+        setError(null);
+        setLoading(true);
+
+        const pageSize = pagination.pageSize;
+        console.log(`Loading initial data with page size: ${pageSize}`);
+
+        // Initialize with first page of data
+        const result = await DatabaseService.getInitialData(pageSize);
+        console.log(
+          `Data loaded. Records: ${result.records.length}, Total: ${result.totalCount}`,
         );
+
+        if (result.records.length === 0) {
+          // Show banner if no records found
+          console.log('No records found, showing banner');
+          setShowBanner(true);
+        } else {
+          console.log(`Setting ${result.records.length} records to state`);
+          setShowBanner(false);
+        }
+
+        // Update the records state
+        setRecords(result.records);
+
+        // Update pagination information
+        setPagination({
+          currentPage: result.currentPage,
+          totalPages: result.totalPages,
+          totalCount: result.totalCount,
+          pageSize: pageSize,
+        });
+
+        // Show success toast with count information
+        if (result.records.length > 0) {
+          ToastAndroid.show(
+            `Loaded ${result.records.length} of ${result.totalCount} records`,
+            ToastAndroid.SHORT,
+          );
+        }
+      } catch (err) {
+        console.error('Error loading records:', err);
+        setError(
+          `Failed to load data from database: ${
+            err.message || 'Unknown error'
+          }`,
+        );
+        setShowBanner(true);
+      } finally {
+        console.log('Finished loading data, setting loading state to false');
+        setLoading(false);
+        setRefreshing(false);
       }
-    } catch (err) {
-      console.error('Error loading records:', err);
-      setError(`Failed to load data from database: ${err.message || 'Unknown error'}`);
-      setShowBanner(true);
-    } finally {
-      console.log('Finished loading data, setting loading state to false');
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [pagination.pageSize]);
+    },
+    [pagination.pageSize],
+  );
 
   // Refresh data
   const onRefresh = useCallback(async () => {
@@ -119,37 +132,40 @@ const HomeScreen: React.FC = () => {
     if (pagination.currentPage >= pagination.totalPages || loadingMore) {
       return;
     }
-    
+
     try {
       setLoadingMore(true);
-      
+
       const nextPage = pagination.currentPage + 1;
       const paginationParams: PaginationParams = {
         page: nextPage,
         pageSize: pagination.pageSize,
       };
-      
+
       let result: QueryResult;
-      
+
       if (isSearching && searchQuery.trim()) {
-        result = await DatabaseService.searchRecordsByName(searchQuery, paginationParams);
+        result = await DatabaseService.searchRecordsByName(
+          searchQuery,
+          paginationParams,
+        );
       } else {
         result = await DatabaseService.getRecords(paginationParams);
       }
-      
+
       // Append new records to existing ones
       setRecords(prevRecords => [...prevRecords, ...result.records]);
-      
+
       // Update pagination information
       setPagination(prev => ({
         ...prev,
         currentPage: nextPage,
       }));
-      
+
       // Show toast indicating more items loaded
       ToastAndroid.show(
         `Loaded ${result.records.length} more records`,
-        ToastAndroid.SHORT
+        ToastAndroid.SHORT,
       );
     } catch (err) {
       console.error('Error loading more records:', err);
@@ -158,22 +174,27 @@ const HomeScreen: React.FC = () => {
       setLoadingMore(false);
     }
   }, [pagination, loadingMore, isSearching, searchQuery]);
-  
+
   useEffect(() => {
     const init = async () => {
       // Request permissions for accessing storage (images)
       if (Platform.OS === 'android') {
         const permissionsGranted = await requestPermissions();
         if (!permissionsGranted) {
-          setError('Storage permission denied. Some images may not display correctly.');
-          ToastAndroid.show('Permission denied for accessing images', ToastAndroid.LONG);
+          setError(
+            'Storage permission denied. Some images may not display correctly.',
+          );
+          ToastAndroid.show(
+            'Permission denied for accessing images',
+            ToastAndroid.LONG,
+          );
         }
       }
-      
+
       // Load initial data from database
       loadData();
     };
-    
+
     init();
 
     // Clean up database connection when the component unmounts
@@ -186,27 +207,30 @@ const HomeScreen: React.FC = () => {
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
     setError(null);
-    
+
     if (query.trim() === '') {
       setIsSearching(false);
       loadData(true); // Reset to first page of all data
       return;
     }
-    
+
     try {
       setLoading(true);
       setIsSearching(true);
-      
+
       // Search with first page
       const searchParams: PaginationParams = {
         page: 1,
         pageSize: pagination.pageSize,
       };
-      
-      const result = await DatabaseService.searchRecordsByName(query, searchParams);
-      
+
+      const result = await DatabaseService.searchRecordsByName(
+        query,
+        searchParams,
+      );
+
       setRecords(result.records);
-      
+
       // Update pagination for search results
       setPagination({
         currentPage: result.currentPage,
@@ -214,11 +238,13 @@ const HomeScreen: React.FC = () => {
         totalCount: result.totalCount,
         pageSize: pagination.pageSize,
       });
-      
+
       // Show info toast about search results
       ToastAndroid.show(
-        `Found ${result.totalCount} ${result.totalCount === 1 ? 'result' : 'results'}`,
-        ToastAndroid.SHORT
+        `Found ${result.totalCount} ${
+          result.totalCount === 1 ? 'result' : 'results'
+        }`,
+        ToastAndroid.SHORT,
       );
     } catch (err) {
       console.error('Error searching records:', err);
@@ -232,20 +258,25 @@ const HomeScreen: React.FC = () => {
   const handleRetry = () => {
     loadData();
   };
-  
+
   // Render pagination info
   const renderPaginationInfo = () => {
     if (loading || pagination.totalCount === 0) return null;
-    
-    const startRange = ((pagination.currentPage - 1) * pagination.pageSize) + 1;
-    const endRange = Math.min(pagination.currentPage * pagination.pageSize, pagination.totalCount);
-    
+
+    const startRange = (pagination.currentPage - 1) * pagination.pageSize + 1;
+    const endRange = Math.min(
+      pagination.currentPage * pagination.pageSize,
+      pagination.totalCount,
+    );
+
     return (
       <View style={styles.paginationInfo}>
         <Text style={styles.paginationText}>
           Showing {startRange}-{endRange} of {pagination.totalCount}
         </Text>
-        {loadingMore && <ProgressBar indeterminate style={styles.loadMoreProgress} />}
+        {loadingMore && (
+          <ProgressBar indeterminate style={styles.loadMoreProgress} />
+        )}
       </View>
     );
   };
@@ -265,9 +296,9 @@ const HomeScreen: React.FC = () => {
             onPress: () => setShowBanner(false),
           },
         ]}
-        icon="information"
-      >
-        Database is empty or not properly configured. Make sure output.sqlite is in the correct location.
+        icon="information">
+        Database is empty or not properly configured. Make sure output.sqlite is
+        in the correct location.
       </Banner>
 
       <Surface style={styles.content}>
@@ -279,10 +310,10 @@ const HomeScreen: React.FC = () => {
           style={styles.searchBar}
           loading={isSearching && loading}
         />
-        
+
         {/* Pagination Info */}
         {renderPaginationInfo()}
-        
+
         {loading && !refreshing && !loadingMore ? (
           <View style={styles.centerContent}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -291,18 +322,17 @@ const HomeScreen: React.FC = () => {
         ) : error ? (
           <View style={styles.centerContent}>
             <Text style={styles.errorText}>{error}</Text>
-            <Button 
-              mode="contained" 
+            <Button
+              mode="contained"
               onPress={handleRetry}
-              style={styles.retryButton}
-            >
+              style={styles.retryButton}>
               Retry
             </Button>
           </View>
         ) : (
-          <RecordTable 
-            records={records} 
-            onSearch={handleSearch} 
+          <RecordTable
+            records={records}
+            onSearch={handleSearch}
             searchQuery={searchQuery}
             onLoadMore={loadMoreData}
             hasMoreData={pagination.currentPage < pagination.totalPages}
