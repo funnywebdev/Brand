@@ -284,7 +284,7 @@ const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Appbar.Header>
-        <Appbar.Content title="Offline Database App" />
+        <Appbar.Content title="Brand censor" />
         <Appbar.Action icon="refresh" onPress={onRefresh} disabled={loading} />
       </Appbar.Header>
 

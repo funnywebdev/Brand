@@ -1,74 +1,77 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  View, 
-  Image, 
-  FlatList, 
+import React, {useCallback, useState, useEffect} from 'react';
+import {
+  StyleSheet,
+  View,
+  Image,
+  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Modal,
   ScrollView,
   Dimensions,
-  ListRenderItemInfo 
+  ListRenderItemInfo,
 } from 'react-native';
-import { 
-  Text, 
-  useTheme, 
-  Card, 
+import {
+  Text,
+  useTheme,
+  Card,
   Divider,
   Button,
-  IconButton
+  IconButton,
 } from 'react-native-paper';
-import { Record } from '../services/DatabaseService';
-import { formatImagePath } from '../utils/ImageUtils';
+import {Record} from '../services/DatabaseService';
+import {formatImagePath} from '../utils/ImageUtils';
 import ImagePlaceholder from './ImagePlaceholder';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 // Component that displays an image with fixed height and calculated width based on original aspect ratio
-const AspectRatioImage: React.FC<{uri: string, height: number}> = ({ uri, height }) => {
+const AspectRatioImage: React.FC<{uri: string; height: number}> = ({
+  uri,
+  height,
+}) => {
   const [aspectRatio, setAspectRatio] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
-  
+
   useEffect(() => {
     setIsLoading(true);
     setError(false);
-    
+
     // Get the original dimensions to calculate aspect ratio
     Image.getSize(
-      uri, 
+      uri,
       (width, height) => {
         const ratio = width / height;
         setAspectRatio(ratio);
         setIsLoading(false);
       },
-      (error) => {
-        console.error("Failed to get image size:", error);
+      error => {
+        console.error('Failed to get image size:', error);
         setIsLoading(false);
         setError(true);
-      }
+      },
     );
   }, [uri]);
-  
+
   if (isLoading) {
     return <ImagePlaceholder size={height} />;
   }
-  
+
   if (error) {
     return <ImagePlaceholder size={height} />;
   }
-  
+
   // Calculate width based on fixed height and original aspect ratio
   const calculatedWidth = height * aspectRatio;
-  
+
   return (
-    <Image 
-      source={{ uri }}
-      style={{ 
-        width: calculatedWidth, 
+    <Image
+      source={{uri}}
+      style={{
+        width: calculatedWidth,
         height: height,
-        borderRadius: 4
+        borderRadius: 4,
       }}
       resizeMode="cover"
     />
@@ -82,32 +85,32 @@ interface RecordDetailModalProps {
 }
 
 // Component to display the original sized image
-const OriginalSizeImage: React.FC<{uri: string | null}> = ({ uri }) => {
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+const OriginalSizeImage: React.FC<{uri: string | null}> = ({uri}) => {
+  const [imageSize, setImageSize] = useState({width: 0, height: 0});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
-  
+
   useEffect(() => {
     if (!uri) {
       setIsLoading(false);
       setError(true);
       return;
     }
-    
+
     setIsLoading(true);
     setError(false);
-    
+
     // Get the original dimensions of the image
     Image.getSize(
-      uri, 
+      uri,
       (width, height) => {
         console.log(`Original image dimensions: ${width}x${height}`);
-        
+
         // Calculate container width (90% of screen width to leave margins)
         const maxContainerWidth = SCREEN_WIDTH * 0.85;
-        
+
         let finalWidth, finalHeight;
-        
+
         // If image is wider than container, scale it down proportionally
         if (width > maxContainerWidth) {
           const ratio = maxContainerWidth / width;
@@ -118,22 +121,22 @@ const OriginalSizeImage: React.FC<{uri: string | null}> = ({ uri }) => {
           finalWidth = width;
           finalHeight = height;
         }
-        
-        setImageSize({ width: finalWidth, height: finalHeight });
+
+        setImageSize({width: finalWidth, height: finalHeight});
         setIsLoading(false);
       },
-      (error) => {
-        console.error("Failed to get image size:", error);
+      error => {
+        console.error('Failed to get image size:', error);
         setIsLoading(false);
         setError(true);
-      }
+      },
     );
   }, [uri]);
-  
+
   if (!uri) {
     return <ImagePlaceholder size={200} fallbackText="No Image" />;
   }
-  
+
   if (isLoading) {
     return (
       <View style={styles.originalImageLoadingContainer}>
@@ -142,18 +145,18 @@ const OriginalSizeImage: React.FC<{uri: string | null}> = ({ uri }) => {
       </View>
     );
   }
-  
+
   if (error) {
     return <ImagePlaceholder size={200} fallbackText="Image Error" />;
   }
-  
+
   return (
-    <Image 
-      source={{ uri }}
-      style={{ 
-        width: imageSize.width, 
+    <Image
+      source={{uri}}
+      style={{
+        width: imageSize.width,
         height: imageSize.height,
-        borderRadius: 8
+        borderRadius: 8,
       }}
       resizeMode="contain"
     />
@@ -161,53 +164,64 @@ const OriginalSizeImage: React.FC<{uri: string | null}> = ({ uri }) => {
 };
 
 // Modal component to display record details
-const RecordDetailModal: React.FC<RecordDetailModalProps> = ({ visible, record, onClose }) => {
+const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
+  visible,
+  record,
+  onClose,
+}) => {
   const imagePath = record?.image ? formatImagePath(record.image) : null;
-  
+
   return (
     <Modal
       visible={visible}
       transparent={true}
       animationType="slide"
-      onRequestClose={onClose}
-    >
+      onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{record?.name || 'Record Details'}</Text>
+            <Text style={styles.modalTitle}>
+              {record?.name || 'Record Details'}
+            </Text>
             <IconButton icon="close" size={24} onPress={onClose} />
           </View>
-          
+
           <ScrollView style={styles.modalBody}>
             {/* Image at original size */}
             <View style={styles.imageContainer}>
               <OriginalSizeImage uri={imagePath} />
             </View>
-            
+
             {/* Record details */}
             <View style={styles.detailsContainer}>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Name:</Text>
                 <Text style={styles.detailValue}>{record?.name || 'N/A'}</Text>
               </View>
-              
+
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Origin:</Text>
-                <Text style={styles.detailValue}>{record?.origin || 'N/A'}</Text>
+                <Text style={styles.detailValue}>
+                  {record?.origin || 'N/A'}
+                </Text>
               </View>
-              
+
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Registration Number:</Text>
-                <Text style={styles.detailValue}>{record?.regNum || 'N/A'}</Text>
+                <Text style={styles.detailValue}>
+                  {record?.regNum || 'N/A'}
+                </Text>
               </View>
-              
+
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Registration Date:</Text>
-                <Text style={styles.detailValue}>{record?.regDate || 'N/A'}</Text>
+                <Text style={styles.detailValue}>
+                  {record?.regDate || 'N/A'}
+                </Text>
               </View>
             </View>
           </ScrollView>
-          
+
           <View style={styles.modalFooter}>
             <Button mode="contained" onPress={onClose}>
               Close
@@ -228,70 +242,83 @@ interface RecordTableProps {
   isLoadingMore: boolean;
 }
 
-const RecordTable: React.FC<RecordTableProps> = ({ 
-  records, 
-  onSearch, 
+const RecordTable: React.FC<RecordTableProps> = ({
+  records,
+  onSearch,
   searchQuery,
   onLoadMore,
   hasMoreData,
-  isLoadingMore
+  isLoadingMore,
 }) => {
   const theme = useTheme();
   const [selectedRecord, setSelectedRecord] = useState<Record | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   const handleRowPress = useCallback((record: Record) => {
     setSelectedRecord(record);
     setModalVisible(true);
   }, []);
-  
+
   const handleCloseModal = useCallback(() => {
     setModalVisible(false);
   }, []);
-  
+
   // Render item for FlatList
-  const renderItem = useCallback(({ item, index }: ListRenderItemInfo<Record>) => (
-    <TouchableOpacity onPress={() => handleRowPress(item)}>
-      <View>
-        <View style={styles.tableRow}>
-          <Text style={styles.nameColumn} numberOfLines={1} ellipsizeMode="tail">
-            {item.name}
-          </Text>
-          <View style={styles.imageColumn}>
-            {item.image ? (
-              <AspectRatioImage 
-                uri={formatImagePath(item.image) || ''} 
-                height={40}
-              />
-            ) : (
-              <ImagePlaceholder />
-            )}
+  const renderItem = useCallback(
+    ({item, index}: ListRenderItemInfo<Record>) => (
+      <TouchableOpacity onPress={() => handleRowPress(item)}>
+        <View>
+          <View style={styles.tableRow}>
+            <Text
+              style={styles.nameColumn}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {item.name}
+            </Text>
+            <View style={styles.imageColumn}>
+              {item.image ? (
+                <AspectRatioImage
+                  uri={formatImagePath(item.image) || ''}
+                  height={40}
+                />
+              ) : (
+                <ImagePlaceholder />
+              )}
+            </View>
+            <Text
+              style={styles.originColumn}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {item.origin}
+            </Text>
+            <Text
+              style={styles.regNumColumn}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {item.regNum}
+            </Text>
+            <Text
+              style={styles.regDateColumn}
+              numberOfLines={1}
+              ellipsizeMode="tail">
+              {item.regDate}
+            </Text>
           </View>
-          <Text style={styles.originColumn} numberOfLines={1} ellipsizeMode="tail">
-            {item.origin}
-          </Text>
-          <Text style={styles.regNumColumn} numberOfLines={1} ellipsizeMode="tail">
-            {item.regNum}
-          </Text>
-          <Text style={styles.regDateColumn} numberOfLines={1} ellipsizeMode="tail">
-            {item.regDate}
-          </Text>
+          <Divider />
         </View>
-        <Divider />
-      </View>
-    </TouchableOpacity>
-  ), [handleRowPress]);
-  
+      </TouchableOpacity>
+    ),
+    [handleRowPress],
+  );
+
   // Render footer with loading indicator or load more button
   const renderFooter = useCallback(() => {
     if (!hasMoreData) {
       return records.length > 0 ? (
-        <Text style={styles.endOfListText}>
-          End of list
-        </Text>
+        <Text style={styles.endOfListText}>End of list</Text>
       ) : null;
     }
-    
+
     if (isLoadingMore) {
       return (
         <View style={styles.loadingMoreContainer}>
@@ -300,33 +327,41 @@ const RecordTable: React.FC<RecordTableProps> = ({
         </View>
       );
     }
-    
+
     return (
-      <Button 
-        mode="contained" 
+      <Button
+        mode="contained"
         style={styles.loadMoreButton}
-        onPress={onLoadMore}
-      >
+        onPress={onLoadMore}>
         Load More
       </Button>
     );
-  }, [hasMoreData, isLoadingMore, onLoadMore, records.length, theme.colors.primary]);
-  
+  }, [
+    hasMoreData,
+    isLoadingMore,
+    onLoadMore,
+    records.length,
+    theme.colors.primary,
+  ]);
+
   // Extract a unique key for each item
-  const keyExtractor = useCallback((item: Record, index: number) => 
-    item.id ? item.id.toString() : `record-${index}`, []);
-  
+  const keyExtractor = useCallback(
+    (item: Record, index: number) =>
+      item.id ? item.id.toString() : `record-${index}`,
+    [],
+  );
+
   // Handle when the end of the list is reached
   const handleEndReached = useCallback(() => {
     if (hasMoreData && !isLoadingMore) {
       onLoadMore();
     }
   }, [hasMoreData, isLoadingMore, onLoadMore]);
-  
+
   // Render list header with column titles
   const renderListHeader = useCallback(() => {
     if (records.length === 0) return null;
-    
+
     return (
       <View style={styles.tableHeader}>
         <Text style={[styles.headerText, styles.nameColumn]}>Name</Text>
@@ -337,7 +372,7 @@ const RecordTable: React.FC<RecordTableProps> = ({
       </View>
     );
   }, [records.length]);
-  console.log("records", records)
+  console.log('records', records);
   return (
     <View style={styles.container}>
       {records.length === 0 ? (
@@ -363,9 +398,9 @@ const RecordTable: React.FC<RecordTableProps> = ({
           contentContainerStyle={styles.tableContainer}
         />
       )}
-      
+
       {/* Record Detail Modal */}
-      <RecordDetailModal 
+      <RecordDetailModal
         visible={modalVisible}
         record={selectedRecord}
         onClose={handleCloseModal}
@@ -458,7 +493,7 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontStyle: 'italic',
   },
-  
+
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -531,7 +566,7 @@ const styles = StyleSheet.create({
   detailValue: {
     flex: 2,
     color: '#333',
-  }
+  },
 });
 
 export default RecordTable;
