@@ -48,7 +48,7 @@ const RecordTable: React.FC<RecordTableProps> = ({
         <View style={styles.imageColumn}>
           {item.image ? (
             <Image 
-              source={{ uri: formatImagePath(item.image) || '' }} 
+              source={{ uri: formatImagePath(item.image) || '' }}
               style={styles.thumbnail}
               onError={() => console.warn(`Failed to load image: ${item.image}`)}
             />
