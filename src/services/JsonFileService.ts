@@ -7,6 +7,7 @@ export interface MainRegisterItem {
   totalSpace: number;
   image?: string;
   flag?: number;
+  currentAmount?: number; // Added field for tracking current amount
 }
 
 export interface JsonItem {
@@ -16,6 +17,13 @@ export interface JsonItem {
   censoredDt: string;
   updatedDt?: string; // Optional field for when items are updated
   mainRegisters: MainRegisterItem[];
+  editStatus?: {
+    saved: boolean;
+    exported: boolean;
+    lastSaved?: string;
+    lastExported?: string;
+    exportPath?: string;
+  };
 }
 
 export interface SearchOptions {
@@ -183,6 +191,173 @@ class JsonFileService {
         (Array.isArray(item.mainRegisters) ? item.mainRegisters.length : 0)
       );
     }, 0);
+  }
+
+  /**
+   * Gets the exports directory path
+   */
+  getExportsDirectory(): string {
+    if (Platform.OS === 'android') {
+      return `${RNFS.ExternalStorageDirectoryPath}/brand/exports`;
+    } else {
+      return `${RNFS.DocumentDirectoryPath}/exports`;
+    }
+  }
+
+  /**
+   * Ensures the exports directory exists
+   */
+  async ensureExportsDirectoryExists(): Promise<void> {
+    const exportsDir = this.getExportsDirectory();
+    try {
+      const exists = await RNFS.exists(exportsDir);
+      if (!exists) {
+        console.log(`Creating exports directory: ${exportsDir}`);
+        await RNFS.mkdir(exportsDir);
+      }
+    } catch (error) {
+      console.error('Error creating exports directory:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save edited item to persistent storage
+   */
+  async saveEditedItem(item: JsonItem): Promise<JsonItem> {
+    try {
+      // Ensure we have a store directory
+      const storeDir = `${RNFS.DocumentDirectoryPath}/edited_items`;
+      const exists = await RNFS.exists(storeDir);
+      if (!exists) {
+        await RNFS.mkdir(storeDir);
+      }
+
+      // Create a filename based on the item id
+      const filePath = `${storeDir}/item_${item.id}.json`;
+      
+      // Update the edit status
+      const updatedItem = {
+        ...item,
+        editStatus: {
+          ...item.editStatus,
+          saved: true,
+          lastSaved: new Date().toISOString()
+        }
+      };
+
+      // Save the item to file
+      await RNFS.writeFile(filePath, JSON.stringify(updatedItem, null, 2), 'utf8');
+      console.log(`Item ${item.id} saved to ${filePath}`);
+      
+      return updatedItem;
+    } catch (error) {
+      console.error('Error saving edited item:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Export edited item to JSON file
+   */
+  async exportEditedItem(item: JsonItem): Promise<JsonItem> {
+    try {
+      // Ensure exports directory exists
+      await this.ensureExportsDirectoryExists();
+      
+      // Create a filename with timestamp to prevent overwriting
+      const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\./g, '-');
+      const exportDir = this.getExportsDirectory();
+      const fileName = `item_${item.id}_${timestamp}.json`;
+      const filePath = `${exportDir}/${fileName}`;
+      
+      // Update the edit status
+      const updatedItem = {
+        ...item,
+        editStatus: {
+          ...item.editStatus,
+          exported: true,
+          lastExported: new Date().toISOString(),
+          exportPath: filePath
+        }
+      };
+
+      // Export the item to file
+      await RNFS.writeFile(filePath, JSON.stringify(updatedItem, null, 2), 'utf8');
+      console.log(`Item ${item.id} exported to ${filePath}`);
+      
+      // Also update the saved item
+      await this.saveEditedItem(updatedItem);
+      
+      return updatedItem;
+    } catch (error) {
+      console.error('Error exporting edited item:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load all saved edited items
+   */
+  async loadAllEditedItems(): Promise<Map<number, JsonItem>> {
+    try {
+      const itemsMap = new Map<number, JsonItem>();
+      const storeDir = `${RNFS.DocumentDirectoryPath}/edited_items`;
+      
+      // Check if directory exists
+      const exists = await RNFS.exists(storeDir);
+      if (!exists) {
+        return itemsMap;
+      }
+      
+      // Read all files in the directory
+      const files = await RNFS.readDir(storeDir);
+      const jsonFiles = files.filter(
+        file => file.isFile() && file.name.toLowerCase().endsWith('.json'),
+      );
+      
+      // Process each file
+      for (const file of jsonFiles) {
+        try {
+          const content = await RNFS.readFile(file.path, 'utf8');
+          const item = JSON.parse(content) as JsonItem;
+          if (item && item.id) {
+            itemsMap.set(item.id, item);
+          }
+        } catch (error) {
+          console.error(`Error reading edited item file ${file.path}:`, error);
+          // Continue with next file
+        }
+      }
+      
+      return itemsMap;
+    } catch (error) {
+      console.error('Error loading edited items:', error);
+      return new Map<number, JsonItem>();
+    }
+  }
+  
+  /**
+   * Delete saved item to reset editing
+   */
+  async deleteSavedItem(itemId: number): Promise<boolean> {
+    try {
+      const storeDir = `${RNFS.DocumentDirectoryPath}/edited_items`;
+      const filePath = `${storeDir}/item_${itemId}.json`;
+      
+      const exists = await RNFS.exists(filePath);
+      if (!exists) {
+        return false;
+      }
+      
+      // Delete the file
+      await RNFS.unlink(filePath);
+      console.log(`Deleted saved item ${itemId}`);
+      return true;
+    } catch (error) {
+      console.error(`Error deleting saved item ${itemId}:`, error);
+      return false;
+    }
   }
 }
 

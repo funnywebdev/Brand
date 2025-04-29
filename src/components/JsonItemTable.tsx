@@ -14,7 +14,8 @@ import {
   Card, 
   Divider,
   Button,
-  Badge
+  Badge,
+  Chip
 } from 'react-native-paper';
 import { JsonItem } from '../services/JsonFileService';
 import { formatImagePath } from '../utils/ImageUtils';
@@ -35,12 +36,19 @@ const JsonItemTable: React.FC<JsonItemTableProps> = ({
   const theme = useTheme();
   
   const renderItem = useCallback(({ item, index }: ListRenderItemInfo<JsonItem>) => {
-    // Just store the count for badge display
+    // Store the count for badge display
     const registerCount = item.mainRegisters ? item.mainRegisters.length : 0;
+    
+    // Check if item has been edited
+    const isEdited = item.editStatus?.saved || false;
+    const isExported = item.editStatus?.exported || false;
     
     return (
       <TouchableOpacity onPress={() => onItemPress && onItemPress(item)}>
-        <View style={styles.itemCard}>
+        <View style={[
+          styles.itemCard, 
+          isEdited && styles.editedItemCard
+        ]}>
           <View style={styles.cardHeader}>
             <View style={styles.idContainer}>
               <Text style={styles.idText}>ID: {item.id}</Text>
@@ -63,17 +71,43 @@ const JsonItemTable: React.FC<JsonItemTableProps> = ({
               <Text style={styles.invoiceValue}>{item.fullInvoiceName || 'N/A'}</Text>
             </View>
             
-            {/* Display register count badge */}
-            {registerCount > 0 && (
-              <View style={styles.registersCountContainer}>
-                <Badge size={24} style={styles.itemCountBadge}>
-                  {registerCount}
-                </Badge>
-                <Text style={styles.registerCountText}>
-                  {registerCount === 1 ? 'register item' : 'register items'}
-                </Text>
-              </View>
-            )}
+            <View style={styles.statusContainer}>
+              {/* Display edit status */}
+              {isEdited && (
+                <Chip 
+                  icon="content-save" 
+                  mode="outlined" 
+                  style={styles.savedChip}
+                  textStyle={styles.chipText}
+                >
+                  Saved
+                </Chip>
+              )}
+              
+              {/* Display export status */}
+              {isExported && (
+                <Chip 
+                  icon="export" 
+                  mode="outlined" 
+                  style={styles.exportedChip}
+                  textStyle={styles.chipText}
+                >
+                  Exported
+                </Chip>
+              )}
+              
+              {/* Display register count badge */}
+              {registerCount > 0 && (
+                <View style={styles.registersCountContainer}>
+                  <Badge size={24} style={styles.itemCountBadge}>
+                    {registerCount}
+                  </Badge>
+                  <Text style={styles.registerCountText}>
+                    {registerCount === 1 ? 'register item' : 'register items'}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
         <Divider />
@@ -134,6 +168,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingVertical: 12,
     paddingHorizontal: 16,
+  },
+  editedItemCard: {
+    backgroundColor: '#f3f9ff', // Light blue background for edited items
   },
   cardHeader: {
     flexDirection: 'row',
@@ -199,6 +236,28 @@ const styles = StyleSheet.create({
   itemCountBadge: {
     backgroundColor: '#2196F3',
     marginRight: 8,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    marginTop: 8,
+  },
+  savedChip: {
+    backgroundColor: '#e8f5e9',
+    marginRight: 8,
+    height: 24,
+  },
+  exportedChip: {
+    backgroundColor: '#e3f2fd',
+    marginRight: 8,
+    height: 24,
+  },
+  chipText: {
+    fontSize: 12,
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   moreItemsText: {
     fontSize: 12,

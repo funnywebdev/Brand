@@ -34,6 +34,9 @@ const SecondTabScreen: React.FC = () => {
 
         // Ensure the invoices directory exists
         await JsonFileService.ensureInvoicesDirectoryExists();
+        
+        // Ensure the exports directory exists
+        await JsonFileService.ensureExportsDirectoryExists();
 
         // Load items
         loadItems();
@@ -46,25 +49,46 @@ const SecondTabScreen: React.FC = () => {
     initialize();
   }, []);
 
-  // Load items from JSON files
+  // Load items from JSON files and merge with saved edited items
   const loadItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+
+      // Load all saved edited items
+      const savedItemsMap = await JsonFileService.loadAllEditedItems();
+      console.log(`Loaded ${savedItemsMap.size} saved edited items`);
 
       // Scan for JSON items
       const jsonItems = await JsonFileService.scanJsonItems({
         companyFilter: searchQuery,
       });
 
-      setItems(jsonItems);
+      // Merge saved items with fetched items
+      const mergedItems = jsonItems.map(item => {
+        const savedItem = savedItemsMap.get(item.id);
+        if (savedItem) {
+          // Use the saved item data, but keep the mainRegisters from original if not in saved
+          return {
+            ...item,
+            mainRegisters: savedItem.mainRegisters || item.mainRegisters,
+            editStatus: savedItem.editStatus,
+          };
+        }
+        return item;
+      });
+
+      setItems(mergedItems);
 
       // Show toast with count
       if (Platform.OS === 'android') {
-        const mainRegisterCount =
-          JsonFileService.countTotalMainRegisters(jsonItems);
+        const mainRegisterCount = JsonFileService.countTotalMainRegisters(mergedItems);
+        const savedCount = savedItemsMap.size;
+        
         ToastAndroid.show(
-          `Found ${jsonItems.length} items with ${mainRegisterCount} registers`,
+          `Found ${mergedItems.length} items with ${mainRegisterCount} registers${
+            savedCount > 0 ? ` (${savedCount} with saved edits)` : ''
+          }`,
           ToastAndroid.SHORT,
         );
       }
