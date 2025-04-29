@@ -30,12 +30,35 @@ interface RegisterDetailsScreenProps {
   onBack: () => void;
 }
 
+// Function to get flag color based on flag value
+const getFlagColor = (flag?: number): string => {
+  if (flag === undefined) return '#999999'; // Default gray
+  
+  switch (flag) {
+    case 0:
+      return '#607D8B'; // Blue Gray
+    case 1:
+      return '#4CAF50'; // Green
+    case 2:
+      return '#2196F3'; // Blue
+    case 3:
+      return '#FF9800'; // Orange
+    case 4:
+      return '#F44336'; // Red
+    case 5:
+      return '#9C27B0'; // Purple
+    default:
+      return '#999999'; // Gray for unknown values
+  }
+};
+
 // Component to display a single register item in the list
 const RegisterListItem: React.FC<{
   register: MainRegisterItem;
   onPress: (register: MainRegisterItem) => void;
 }> = ({register, onPress}) => {
-  console.log(register);
+  const flagColor = getFlagColor(register.flag);
+  
   return (
     <TouchableOpacity
       style={styles.registerItem}
@@ -49,7 +72,11 @@ const RegisterListItem: React.FC<{
           <Text style={styles.registerSpace}>
             Space: {register.totalSpace?.toLocaleString()} units
           </Text>
-          <Text style={styles.flagText}>Flag: {register.flag}</Text>
+          {register.flag !== undefined && (
+            <Text>
+              Flag: <Text style={[styles.flagText, { color: flagColor }]}>{register.flag}</Text>
+            </Text>
+          )}
         </View>
 
         <View style={styles.registerImageContainer}>
@@ -161,7 +188,7 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
                 {selectedRegister.flag !== undefined && (
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Flag:</Text>
-                    <Text style={styles.detailValue}>
+                    <Text style={[styles.detailValue, { color: getFlagColor(selectedRegister.flag) }]}>
                       {selectedRegister.flag}
                     </Text>
                   </View>
@@ -325,7 +352,7 @@ const styles = StyleSheet.create({
   },
   flagText: {
     fontSize: 14,
-    color: '#d32f2f',
+    fontWeight: 'bold',
     marginTop: 4,
   },
   registerImageContainer: {
