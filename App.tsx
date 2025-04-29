@@ -14,7 +14,7 @@ import {
   adaptNavigationTheme,
 } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import HomeScreen from './src/screens/HomeScreen';
+import TabNavigator from './src/navigation/TabNavigator';
 
 // Ignore specific warnings
 LogBox.ignoreLogs([
@@ -52,7 +52,7 @@ function App(): React.JSX.Element {
           barStyle={isDarkMode ? 'light-content' : 'dark-content'}
           backgroundColor={theme.colors.background}
         />
-        <HomeScreen />
+        <TabNavigator />
       </SafeAreaProvider>
     </PaperProvider>
   );
