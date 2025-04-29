@@ -265,49 +265,69 @@ const RecordTable: React.FC<RecordTableProps> = ({
 
   // Render item for FlatList
   const renderItem = useCallback(
-    ({item, index}: ListRenderItemInfo<Record>) => (
-      <TouchableOpacity onPress={() => handleRowPress(item)}>
-        <View>
-          <View style={styles.tableRow}>
-            <Text
-              style={styles.nameColumn}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {item.name}
-            </Text>
-            <View style={styles.imageColumn}>
-              {item.image ? (
-                <AspectRatioImage
-                  uri={formatImagePath(item.image) || ''}
-                  height={40}
-                />
-              ) : (
-                <ImagePlaceholder />
-              )}
+    ({item, index}: ListRenderItemInfo<Record>) => {
+      // Check if the record has KR origin
+      const isKoreanOrigin = item.origin === 'KR';
+      
+      return (
+        <TouchableOpacity onPress={() => handleRowPress(item)}>
+          <View>
+            <View style={[
+              styles.tableRow,
+              isKoreanOrigin && styles.highlightedRow
+            ]}>
+              <Text
+                style={[
+                  styles.nameColumn,
+                  isKoreanOrigin && styles.highlightedText
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {item.name}
+              </Text>
+              <View style={styles.imageColumn}>
+                {item.image ? (
+                  <AspectRatioImage
+                    uri={formatImagePath(item.image) || ''}
+                    height={40}
+                  />
+                ) : (
+                  <ImagePlaceholder />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.originColumn,
+                  isKoreanOrigin && styles.highlightedText
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {item.origin}
+              </Text>
+              <Text
+                style={[
+                  styles.regNumColumn,
+                  isKoreanOrigin && styles.highlightedText
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {item.regNum}
+              </Text>
+              <Text
+                style={[
+                  styles.regDateColumn,
+                  isKoreanOrigin && styles.highlightedText
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {item.regDate}
+              </Text>
             </View>
-            <Text
-              style={styles.originColumn}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {item.origin}
-            </Text>
-            <Text
-              style={styles.regNumColumn}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {item.regNum}
-            </Text>
-            <Text
-              style={styles.regDateColumn}
-              numberOfLines={1}
-              ellipsizeMode="tail">
-              {item.regDate}
-            </Text>
+            <Divider />
           </View>
-          <Divider />
-        </View>
-      </TouchableOpacity>
-    ),
+        </TouchableOpacity>
+      );
+    },
     [handleRowPress],
   );
 
@@ -445,6 +465,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
     backgroundColor: 'white',
+  },
+  highlightedRow: {
+    backgroundColor: '#fff3e0', // Light orange background for Korean records
+  },
+  highlightedText: {
+    color: '#e65100', // Dark orange text for Korean records
+    fontWeight: 'bold',
   },
   nameColumn: {
     flex: 2,
