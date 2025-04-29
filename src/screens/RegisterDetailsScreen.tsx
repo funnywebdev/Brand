@@ -24,6 +24,7 @@ import {SafeAreaView} from 'react-native-safe-area-context';
 import {JsonItem, MainRegisterItem} from '../services/JsonFileService';
 import {formatImagePath} from '../utils/ImageUtils';
 import ImagePlaceholder from '../components/ImagePlaceholder';
+import BrandSearchScreen from './BrandSearchScreen';
 
 interface RegisterDetailsScreenProps {
   item: JsonItem;
@@ -56,7 +57,8 @@ const getFlagColor = (flag?: number): string => {
 const RegisterListItem: React.FC<{
   register: MainRegisterItem;
   onPress: (register: MainRegisterItem) => void;
-}> = ({register, onPress}) => {
+  onBrandPress: (brand: string) => void;
+}> = ({register, onPress, onBrandPress}) => {
   const flagColor = getFlagColor(register.flag);
   
   return (
@@ -66,9 +68,17 @@ const RegisterListItem: React.FC<{
       <View style={styles.registerContent}>
         <View style={styles.registerTextContent}>
           <Text style={styles.registerName}>{register.name}</Text>
-          <Text style={styles.registerBrand}>
-            Brand: <Text style={styles.brandText}>{register.brand}</Text>
-          </Text>
+          <View style={styles.brandContainer}>
+            <Text style={styles.registerBrand}>Brand: </Text>
+            <TouchableOpacity 
+              onPress={() => onBrandPress(register.brand)}
+              activeOpacity={0.6}
+            >
+              <Text style={[styles.brandText, styles.brandLink]}>
+                {register.brand}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.registerSpace}>
             Space: {register.totalSpace?.toLocaleString()} units
           </Text>
@@ -103,9 +113,10 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
   onBack,
 }) => {
   const theme = useTheme();
-  const [selectedRegister, setSelectedRegister] =
-    useState<MainRegisterItem | null>(null);
+  const [selectedRegister, setSelectedRegister] = useState<MainRegisterItem | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [showBrandSearch, setShowBrandSearch] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState('');
 
   // Handle register item press
   const handleRegisterPress = useCallback((register: MainRegisterItem) => {
@@ -118,13 +129,33 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
     setDetailModalVisible(false);
     setSelectedRegister(null);
   }, []);
+  
+  // Handle brand press to navigate to brand search
+  const handleBrandPress = useCallback((brand: string) => {
+    setSelectedBrand(brand);
+    setShowBrandSearch(true);
+    // Close detail modal if it's open
+    if (detailModalVisible) {
+      setDetailModalVisible(false);
+    }
+  }, [detailModalVisible]);
+  
+  // Handle back from brand search
+  const handleBackFromBrandSearch = useCallback(() => {
+    setShowBrandSearch(false);
+    setSelectedBrand('');
+  }, []);
 
   // Render a register item in the list
   const renderRegisterItem = useCallback(
     ({item: register}: ListRenderItemInfo<MainRegisterItem>) => (
-      <RegisterListItem register={register} onPress={handleRegisterPress} />
+      <RegisterListItem 
+        register={register} 
+        onPress={handleRegisterPress}
+        onBrandPress={handleBrandPress}
+      />
     ),
-    [handleRegisterPress],
+    [handleRegisterPress, handleBrandPress],
   );
 
   // Extract key for list item
@@ -172,9 +203,11 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
               <Card.Content>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Brand:</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedRegister.brand || 'N/A'}
-                  </Text>
+                  <TouchableOpacity onPress={() => handleBrandPress(selectedRegister.brand)}>
+                    <Text style={[styles.detailValue, styles.brandLink]}>
+                      {selectedRegister.brand || 'N/A'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.detailRow}>
@@ -210,6 +243,17 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
     );
   };
 
+  // If showing brand search, render the brand search screen
+  if (showBrandSearch) {
+    return (
+      <BrandSearchScreen
+        initialBrand={selectedBrand}
+        onBack={handleBackFromBrandSearch}
+      />
+    );
+  }
+
+  // Otherwise render the register details screen
   return (
     <SafeAreaView style={styles.container}>
       <Appbar.Header>
@@ -338,13 +382,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
   },
+  brandContainer: {
+    flexDirection: 'row',
+    marginBottom: 4,
+    alignItems: 'center',
+  },
   registerBrand: {
     fontSize: 14,
-    marginBottom: 4,
   },
   brandText: {
     fontWeight: '500',
     color: '#0066cc',
+  },
+  brandLink: {
+    textDecorationLine: 'underline',
   },
   registerSpace: {
     fontSize: 14,
