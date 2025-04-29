@@ -20,7 +20,8 @@ export const formatImagePath = (imagePath: string | null): string | null => {
 
   // For Android, ensure the file:// prefix is added
   if (Platform.OS === 'android') {
-    return `file://${RNFS.ExternalStorageDirectoryPath}/brand/${imagePath}`;
+    console.log(`file://${RNFS.ExternalStorageDirectoryPath}/${imagePath}`);
+    return `file://${RNFS.ExternalStorageDirectoryPath}/${imagePath}`;
   }
 
   return imagePath;

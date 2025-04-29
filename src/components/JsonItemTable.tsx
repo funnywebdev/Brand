@@ -35,11 +35,7 @@ const JsonItemTable: React.FC<JsonItemTableProps> = ({
   const theme = useTheme();
   
   const renderItem = useCallback(({ item, index }: ListRenderItemInfo<JsonItem>) => {
-    // Get the first main register item for display
-    const firstRegister = item.mainRegisters && item.mainRegisters.length > 0 
-      ? item.mainRegisters[0] 
-      : null;
-    
+    // Just store the count for badge display
     const registerCount = item.mainRegisters ? item.mainRegisters.length : 0;
     
     return (
@@ -67,48 +63,17 @@ const JsonItemTable: React.FC<JsonItemTableProps> = ({
               <Text style={styles.invoiceValue}>{item.fullInvoiceName || 'N/A'}</Text>
             </View>
             
-            <View style={styles.registersContainer}>
-              {firstRegister ? (
-                <View style={styles.firstRegisterRow}>
-                  <View style={styles.registerTextContainer}>
-                    <Text style={styles.registerNameText}>
-                      {firstRegister.name || 'Unknown Item'}
-                    </Text>
-                    <Text style={styles.registerBrandText}>
-                      Brand: {firstRegister.brand || 'N/A'}
-                    </Text>
-                    <Text style={styles.registerSpaceText}>
-                      Space: {firstRegister.totalSpace ? firstRegister.totalSpace.toLocaleString() : 'N/A'}
-                    </Text>
-                  </View>
-                  
-                  <View style={styles.registerImageContainer}>
-                    {firstRegister.image ? (
-                      <Image 
-                        source={{ uri: formatImagePath(firstRegister.image) || '' }}
-                        style={styles.registerImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.noImagePlaceholder}>
-                        <Text style={styles.noImageText}>No Image</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.noRegistersText}>No register items found</Text>
-              )}
-              
-              {registerCount > 1 && (
-                <View style={styles.moreItemsContainer}>
-                  <Badge size={24} style={styles.itemCountBadge}>
-                    +{registerCount - 1}
-                  </Badge>
-                  <Text style={styles.moreItemsText}>more items</Text>
-                </View>
-              )}
-            </View>
+            {/* Display register count badge */}
+            {registerCount > 0 && (
+              <View style={styles.registersCountContainer}>
+                <Badge size={24} style={styles.itemCountBadge}>
+                  {registerCount}
+                </Badge>
+                <Text style={styles.registerCountText}>
+                  {registerCount === 1 ? 'register item' : 'register items'}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
         <Divider />
@@ -220,57 +185,16 @@ const styles = StyleSheet.create({
   firstRegisterRow: {
     flexDirection: 'row',
   },
-  registerTextContainer: {
-    flex: 3,
-    justifyContent: 'center',
-  },
-  registerNameText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  registerBrandText: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  registerSpaceText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  registerImageContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  registerImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 4,
-  },
-  noImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 4,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noImageText: {
-    fontSize: 10,
-    color: '#999',
-  },
-  noRegistersText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-    color: '#999',
-    textAlign: 'center',
-    marginVertical: 8,
-  },
-  moreItemsContainer: {
+  registersCountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
     marginTop: 8,
+  },
+  registerCountText: {
+    fontSize: 14,
+    color: '#666',
+    marginLeft: 8,
   },
   itemCountBadge: {
     backgroundColor: '#2196F3',

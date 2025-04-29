@@ -6,6 +6,7 @@ export interface MainRegisterItem {
   brand: string;
   totalSpace: number;
   image?: string;
+  flag?: number;
 }
 
 export interface JsonItem {
@@ -28,7 +29,7 @@ class JsonFileService {
   constructor() {
     // Set predefined "invoices" directory based on platform
     if (Platform.OS === 'android') {
-      this.invoicesDirectory = `${RNFS.ExternalStorageDirectoryPath}/invoices`;
+      this.invoicesDirectory = `${RNFS.ExternalStorageDirectoryPath}/brand/invoices`;
     } else {
       this.invoicesDirectory = `${RNFS.DocumentDirectoryPath}/invoices`;
     }

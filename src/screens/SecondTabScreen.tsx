@@ -1,21 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, ToastAndroid, ScrollView, Platform } from 'react-native';
-import { 
-  Text, 
-  Surface, 
-  TextInput, 
-  Button, 
-  Card, 
-  Portal, 
-  Modal, 
-  List, 
-  Searchbar, 
-  Chip
-} from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import JsonFileService, { JsonItem } from '../services/JsonFileService';
+import React, {useState, useEffect, useCallback} from 'react';
+import {StyleSheet, View, ToastAndroid, Platform} from 'react-native';
+import {Text, Surface, Button, Card, Searchbar} from 'react-native-paper';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import JsonFileService, {JsonItem} from '../services/JsonFileService';
 import JsonItemTable from '../components/JsonItemTable';
-import { requestPermissions } from '../utils/PermissionsManager';
+import {requestPermissions} from '../utils/PermissionsManager';
+import RegisterDetailsScreen from './RegisterDetailsScreen';
 
 const SecondTabScreen: React.FC = () => {
   const [items, setItems] = useState<JsonItem[]>([]);
@@ -23,8 +13,8 @@ const SecondTabScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<JsonItem | null>(null);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  
+  const [showDetails, setShowDetails] = useState(false);
+
   // Initialize and load items
   useEffect(() => {
     const initialize = async () => {
@@ -41,10 +31,10 @@ const SecondTabScreen: React.FC = () => {
             return;
           }
         }
-        
+
         // Ensure the invoices directory exists
         await JsonFileService.ensureInvoicesDirectoryExists();
-        
+
         // Load items
         loadItems();
       } catch (err) {
@@ -52,29 +42,30 @@ const SecondTabScreen: React.FC = () => {
         setError(`Failed to initialize: ${err.message || 'Unknown error'}`);
       }
     };
-    
+
     initialize();
   }, []);
-  
+
   // Load items from JSON files
   const loadItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Scan for JSON items
       const jsonItems = await JsonFileService.scanJsonItems({
-        companyFilter: searchQuery
+        companyFilter: searchQuery,
       });
-      
+
       setItems(jsonItems);
-      
+
       // Show toast with count
       if (Platform.OS === 'android') {
-        const mainRegisterCount = JsonFileService.countTotalMainRegisters(jsonItems);
+        const mainRegisterCount =
+          JsonFileService.countTotalMainRegisters(jsonItems);
         ToastAndroid.show(
           `Found ${jsonItems.length} items with ${mainRegisterCount} registers`,
-          ToastAndroid.SHORT
+          ToastAndroid.SHORT,
         );
       }
     } catch (err) {
@@ -84,111 +75,35 @@ const SecondTabScreen: React.FC = () => {
       setLoading(false);
     }
   }, [searchQuery]);
-  
-  // Handle item press - show detail modal
+
+  // Handle item press - navigate to details screen
   const handleItemPress = useCallback((item: JsonItem) => {
     setSelectedItem(item);
-    setDetailModalVisible(true);
+    setShowDetails(true);
   }, []);
-  
+
+  // Handle back from details screen
+  const handleBackFromDetails = useCallback(() => {
+    setShowDetails(false);
+    setSelectedItem(null);
+  }, []);
+
   // Handle search
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
-  
-  // Render detail modal
-  const renderDetailModal = () => {
-    if (!selectedItem) return null;
-    
+
+  // If showing details screen, render that instead of the list
+  if (showDetails && selectedItem) {
     return (
-      <Portal>
-        <Modal
-          visible={detailModalVisible}
-          onDismiss={() => setDetailModalVisible(false)}
-          contentContainerStyle={styles.modalContainer}
-        >
-          <ScrollView style={styles.modalScrollView}>
-            <Text style={styles.modalTitle}>Item Details</Text>
-            
-            <Card style={styles.modalCard}>
-              <Card.Content>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>ID:</Text>
-                  <Text style={styles.detailValue}>{selectedItem.id}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Invoice:</Text>
-                  <Text style={styles.detailValue}>{selectedItem.fullInvoiceName || 'N/A'}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Company:</Text>
-                  <Text style={styles.detailValue}>{selectedItem.objCompany || 'N/A'}</Text>
-                </View>
-                
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Date:</Text>
-                  <Text style={styles.detailValue}>{selectedItem.censoredDt || 'N/A'}</Text>
-                </View>
-                
-                {selectedItem.updatedDt && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Updated:</Text>
-                    <Text style={styles.detailValue}>{selectedItem.updatedDt}</Text>
-                  </View>
-                )}
-              </Card.Content>
-            </Card>
-            
-            <Text style={styles.sectionTitle}>Main Registers</Text>
-            
-            {selectedItem.mainRegisters && selectedItem.mainRegisters.length > 0 ? (
-              selectedItem.mainRegisters.map((register, index) => (
-                <Card key={`register-${index}`} style={styles.registerCard}>
-                  <Card.Content>
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Name:</Text>
-                      <Text style={styles.detailValue}>{register.name || 'N/A'}</Text>
-                    </View>
-                    
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Brand:</Text>
-                      <Text style={styles.detailValue}>{register.brand || 'N/A'}</Text>
-                    </View>
-                    
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Space:</Text>
-                      <Text style={styles.detailValue}>{register.totalSpace ? register.totalSpace.toLocaleString() : 'N/A'}</Text>
-                    </View>
-                    
-                    {register.image && (
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Image:</Text>
-                        <Text style={styles.detailValue}>{register.image}</Text>
-                      </View>
-                    )}
-                  </Card.Content>
-                </Card>
-              ))
-            ) : (
-              <Text style={styles.noRegistersText}>No register items found</Text>
-            )}
-            
-            <Button
-              mode="contained"
-              onPress={() => setDetailModalVisible(false)}
-              style={styles.closeButton}
-            >
-              Close
-            </Button>
-          </ScrollView>
-        </Modal>
-      </Portal>
+      <RegisterDetailsScreen
+        item={selectedItem}
+        onBack={handleBackFromDetails}
+      />
     );
-  };
-  
-  
+  }
+
+  // Otherwise show the main list screen
   return (
     <SafeAreaView style={styles.container}>
       <Surface style={styles.content}>
@@ -199,26 +114,23 @@ const SecondTabScreen: React.FC = () => {
             value={searchQuery}
             style={styles.searchBar}
           />
-          
-          <Button 
-            mode="contained" 
+
+          <Button
+            mode="contained"
             onPress={loadItems}
             disabled={loading}
             icon="refresh"
-            style={styles.scanButton}
-          >
+            style={styles.scanButton}>
             Scan Files
           </Button>
         </View>
-        
+
         <JsonItemTable
           items={items}
           onItemPress={handleItemPress}
           isLoading={loading}
           onRetry={loadItems}
         />
-        
-        {renderDetailModal()}
       </Surface>
     </SafeAreaView>
   );

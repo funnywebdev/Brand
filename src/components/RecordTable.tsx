@@ -169,7 +169,7 @@ const RecordDetailModal: React.FC<RecordDetailModalProps> = ({
   record,
   onClose,
 }) => {
-  const imagePath = record?.image ? formatImagePath(record.image) : null;
+  const imagePath = record?.image ? formatImagePath(`brand/${record.image}`) : null;
 
   return (
     <Modal
@@ -288,7 +288,7 @@ const RecordTable: React.FC<RecordTableProps> = ({
               <View style={styles.imageColumn}>
                 {item.image ? (
                   <AspectRatioImage
-                    uri={formatImagePath(item.image) || ''}
+                    uri={formatImagePath(`brand/${item.image}`) || ''}
                     height={40}
                   />
                 ) : (
