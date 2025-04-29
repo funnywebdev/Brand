@@ -80,13 +80,24 @@ const RegisterListItem: React.FC<{
   // Handle text input changes
   const handleAmountChange = (text: string) => {
     setAmount(text);
+    
     // Only update if valid number or empty
     if (text === '') {
       onAmountChange(register, undefined);
     } else {
       const numericValue = parseFloat(text);
+      
+      // Validate that the amount is not NaN and doesn't exceed totalSpace
       if (!isNaN(numericValue)) {
-        onAmountChange(register, numericValue);
+        // Ensure the value doesn't exceed totalSpace
+        const validatedValue = Math.min(numericValue, register.totalSpace);
+        
+        // If the user entered a value higher than totalSpace, update the input field
+        if (numericValue > register.totalSpace) {
+          setAmount(validatedValue.toString());
+        }
+        
+        onAmountChange(register, validatedValue);
       }
     }
   };
@@ -133,6 +144,10 @@ const RegisterListItem: React.FC<{
               right={
                 <TextInput.Affix text="units" />
               }
+              error={parseFloat(amount) > register.totalSpace}
+              placeholder={`Max: ${register.totalSpace}`}
+              maxLength={10}
+              helper={`Max: ${register.totalSpace.toLocaleString()} units`}
             />
           </View>
           
@@ -209,10 +224,24 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
   
   // Handle amount change for a register
   const handleAmountChange = useCallback((register: MainRegisterItem, amount: number | undefined) => {
+    // Ensure amount doesn't exceed totalSpace
+    let validAmount = amount;
+    if (amount !== undefined && amount > register.totalSpace) {
+      validAmount = register.totalSpace;
+      
+      // Show toast on Android
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(
+          `Value limited to maximum: ${register.totalSpace} units`,
+          ToastAndroid.SHORT
+        );
+      }
+    }
+    
     // Update the register in the currentItem
     const updatedRegisters = currentItem.mainRegisters.map(r => {
       if (r.name === register.name && r.brand === register.brand) {
-        return { ...r, currentAmount: amount };
+        return { ...r, currentAmount: validAmount };
       }
       return r;
     });
@@ -836,7 +865,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   amountContainer: {
-    width: 100,
+    width: 120,
     marginBottom: 8,
   },
   amountInput: {
