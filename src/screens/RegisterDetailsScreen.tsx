@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useState, useEffect} from 'react';
 import {
   StyleSheet,
   View,
@@ -19,6 +19,7 @@ import {
   Button,
   Portal,
   Modal,
+  Searchbar,
 } from 'react-native-paper';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {JsonItem, MainRegisterItem} from '../services/JsonFileService';
@@ -117,6 +118,8 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [showBrandSearch, setShowBrandSearch] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [registerSearchQuery, setRegisterSearchQuery] = useState('');
+  const [filteredRegisters, setFilteredRegisters] = useState<MainRegisterItem[]>(item.mainRegisters || []);
 
   // Handle register item press
   const handleRegisterPress = useCallback((register: MainRegisterItem) => {
@@ -145,6 +148,36 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
     setShowBrandSearch(false);
     setSelectedBrand('');
   }, []);
+  
+  // Handle register item search
+  const handleRegisterSearch = useCallback(
+    (query: string) => {
+      setRegisterSearchQuery(query);
+      
+      if (!query.trim()) {
+        // If search is empty, show all registers
+        setFilteredRegisters(item.mainRegisters || []);
+        return;
+      }
+      
+      // Filter registers by name or brand
+      const normalizedQuery = query.toLowerCase().trim();
+      const filtered = (item.mainRegisters || []).filter(
+        register => 
+          register.name.toLowerCase().includes(normalizedQuery) || 
+          register.brand.toLowerCase().includes(normalizedQuery)
+      );
+      
+      setFilteredRegisters(filtered);
+    },
+    [item.mainRegisters]
+  );
+  
+  // Initialize filtered registers when item changes
+  useEffect(() => {
+    setFilteredRegisters(item.mainRegisters || []);
+    setRegisterSearchQuery('');
+  }, [item.mainRegisters]);
 
   // Render a register item in the list
   const renderRegisterItem = useCallback(
@@ -291,16 +324,48 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
         </Card>
 
         {/* Register List */}
-        <Text style={styles.sectionTitle}>Register Items</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Register Items</Text>
+          <Text style={styles.itemCount}>
+            {filteredRegisters.length} of {item.mainRegisters?.length || 0} items
+          </Text>
+        </View>
+
+        {/* Register Search */}
+        <Searchbar
+          placeholder="Search by name or brand"
+          onChangeText={handleRegisterSearch}
+          value={registerSearchQuery}
+          style={styles.registerSearchBar}
+        />
 
         {item.mainRegisters && item.mainRegisters.length > 0 ? (
-          <FlatList
-            data={item.mainRegisters}
-            renderItem={renderRegisterItem}
-            keyExtractor={keyExtractor}
-            style={styles.registerList}
-            contentContainerStyle={styles.registerListContent}
-          />
+          <>
+            {filteredRegisters.length > 0 ? (
+              <FlatList
+                data={filteredRegisters}
+                renderItem={renderRegisterItem}
+                keyExtractor={keyExtractor}
+                style={styles.registerList}
+                contentContainerStyle={styles.registerListContent}
+              />
+            ) : (
+              <Card style={styles.emptyCard}>
+                <Card.Content>
+                  <Text style={styles.emptyText}>
+                    No matches found for "{registerSearchQuery}"
+                  </Text>
+                  <Button 
+                    mode="text" 
+                    onPress={() => handleRegisterSearch('')}
+                    style={styles.clearSearchButton}
+                  >
+                    Clear Search
+                  </Button>
+                </Card.Content>
+              </Card>
+            )}
+          </>
         ) : (
           <Card style={styles.emptyCard}>
             <Card.Content>
@@ -353,10 +418,28 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginVertical: 12,
+  },
+  itemCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  registerSearchBar: {
+    marginBottom: 12,
+    backgroundColor: '#f5f5f5',
+    elevation: 1,
+  },
+  clearSearchButton: {
+    marginTop: 8,
+    alignSelf: 'center',
   },
   registerList: {
     flex: 1,
