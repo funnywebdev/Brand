@@ -359,6 +359,56 @@ class JsonFileService {
       return false;
     }
   }
+  
+  /**
+   * Reset saved and exported status for an item
+   */
+  async resetItemStatus(item: JsonItem): Promise<JsonItem> {
+    // First delete the saved file
+    await this.deleteSavedItem(item.id);
+    
+    // Return a new item with status removed and current amounts cleared
+    const updatedItem: JsonItem = {
+      ...item,
+      editStatus: undefined,
+      mainRegisters: item.mainRegisters.map(register => ({
+        ...register,
+        currentAmount: undefined
+      }))
+    };
+    
+    return updatedItem;
+  }
+  
+  /**
+   * Reset all saved items
+   */
+  async resetAllSavedItems(): Promise<boolean> {
+    try {
+      const storeDir = `${RNFS.DocumentDirectoryPath}/edited_items`;
+      
+      // Check if directory exists
+      const exists = await RNFS.exists(storeDir);
+      if (!exists) {
+        return true; // Nothing to reset
+      }
+      
+      // Get all saved files
+      const files = await RNFS.readDir(storeDir);
+      const jsonFiles = files.filter(file => file.isFile() && file.name.endsWith('.json'));
+      
+      // Delete each file
+      for (const file of jsonFiles) {
+        await RNFS.unlink(file.path);
+      }
+      
+      console.log(`Reset ${jsonFiles.length} saved items`);
+      return true;
+    } catch (error) {
+      console.error('Error resetting all saved items:', error);
+      return false;
+    }
+  }
 }
 
 export default new JsonFileService();

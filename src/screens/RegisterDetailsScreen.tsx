@@ -336,6 +336,42 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
     }
   }, [currentItem, handleSave, isChanged, onItemUpdated]);
   
+  // Handle reset item status
+  const handleResetStatus = useCallback(async () => {
+    try {
+      // Reset the item
+      const resetItem = await JsonFileService.resetItemStatus(currentItem);
+      
+      // Update the item
+      setCurrentItem(resetItem);
+      setIsChanged(false);
+      
+      // Update filtered registers
+      setFilteredRegisters(resetItem.mainRegisters || []);
+      
+      // Reset save/export status
+      setSaveSuccess(null);
+      setExportSuccess(null);
+      
+      // Show toast if on Android
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Item status reset successfully', ToastAndroid.SHORT);
+      }
+      
+      // Notify parent
+      if (onItemUpdated) {
+        onItemUpdated(resetItem);
+      }
+    } catch (error) {
+      console.error('Error resetting item status:', error);
+      
+      // Show toast if on Android
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Failed to reset item status', ToastAndroid.LONG);
+      }
+    }
+  }, [currentItem, onItemUpdated]);
+  
   // Discard changes
   const handleDiscard = useCallback(async () => {
     try {
@@ -469,6 +505,15 @@ const RegisterDetailsScreen: React.FC<RegisterDetailsScreenProps> = ({
             }}
           />
         )}
+        <Divider />
+        <Menu.Item
+          icon="refresh"
+          title="Reset Item Status"
+          onPress={() => {
+            setMenuVisible(false);
+            handleResetStatus();
+          }}
+        />
       </Menu>
     );
   }, [menuVisible, isChanged, isSaving, isExporting, handleSave, handleExport, currentItem.editStatus]);

@@ -1,6 +1,16 @@
 import React, {useState, useEffect, useCallback} from 'react';
 import {StyleSheet, View, ToastAndroid, Platform} from 'react-native';
-import {Text, Surface, Button, Card, Searchbar} from 'react-native-paper';
+import {
+  Text, 
+  Surface, 
+  Button, 
+  Card, 
+  Searchbar, 
+  Menu, 
+  IconButton,
+  Portal,
+  Dialog
+} from 'react-native-paper';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import JsonFileService, {JsonItem} from '../services/JsonFileService';
 import JsonItemTable from '../components/JsonItemTable';
@@ -14,6 +24,10 @@ const SecondTabScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<JsonItem | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  
+  // Menu state
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Initialize and load items
   useEffect(() => {
@@ -116,13 +130,90 @@ const SecondTabScreen: React.FC = () => {
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
-
+  
+  // Handle reset all items
+  const handleResetAllItems = useCallback(async () => {
+    try {
+      setLoading(true);
+      
+      // Reset all saved items
+      const success = await JsonFileService.resetAllSavedItems();
+      
+      if (success) {
+        // Reload items to reflect the reset
+        await loadItems();
+        
+        // Show success toast
+        if (Platform.OS === 'android') {
+          ToastAndroid.show(
+            'All item statuses have been reset successfully',
+            ToastAndroid.SHORT
+          );
+        }
+      } else {
+        // Show error toast
+        if (Platform.OS === 'android') {
+          ToastAndroid.show(
+            'Failed to reset all item statuses',
+            ToastAndroid.LONG
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error resetting all items:', error);
+      
+      // Show error toast
+      if (Platform.OS === 'android') {
+        ToastAndroid.show(
+          'An error occurred while resetting item statuses',
+          ToastAndroid.LONG
+        );
+      }
+    } finally {
+      setLoading(false);
+      setShowResetDialog(false);
+    }
+  }, [loadItems]);
+  
+  // Update item if it was changed in details screen
+  const handleItemUpdated = useCallback((updatedItem: JsonItem) => {
+    setItems(prevItems => 
+      prevItems.map(item => 
+        item.id === updatedItem.id ? updatedItem : item
+      )
+    );
+  }, []);
+  
+  // Render reset all confirmation dialog
+  const renderResetDialog = useCallback(() => {
+    return (
+      <Portal>
+        <Dialog
+          visible={showResetDialog}
+          onDismiss={() => setShowResetDialog(false)}
+        >
+          <Dialog.Title>Reset All Items?</Dialog.Title>
+          <Dialog.Content>
+            <Text>
+              Are you sure you want to reset all saved and exported items? This will clear all current amount values and status information across all items.
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShowResetDialog(false)}>Cancel</Button>
+            <Button onPress={handleResetAllItems} mode="contained">Reset All</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+    );
+  }, [showResetDialog, handleResetAllItems]);
+  
   // If showing details screen, render that instead of the list
   if (showDetails && selectedItem) {
     return (
       <RegisterDetailsScreen
         item={selectedItem}
         onBack={handleBackFromDetails}
+        onItemUpdated={handleItemUpdated}
       />
     );
   }
@@ -139,15 +230,40 @@ const SecondTabScreen: React.FC = () => {
             style={styles.searchBar}
           />
 
-          <Button
-            mode="contained"
-            onPress={loadItems}
-            disabled={loading}
-            icon="refresh"
-            style={styles.scanButton}>
-            Scan Files
-          </Button>
+          <View style={styles.buttonsRow}>
+            <Button
+              mode="contained"
+              onPress={loadItems}
+              disabled={loading}
+              icon="refresh"
+              style={styles.scanButton}>
+              Scan Files
+            </Button>
+            
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => setMenuVisible(false)}
+              anchor={
+                <IconButton
+                  icon="dots-vertical"
+                  onPress={() => setMenuVisible(true)}
+                />
+              }
+            >
+              <Menu.Item
+                icon="refresh"
+                title="Reset All Items"
+                onPress={() => {
+                  setMenuVisible(false);
+                  setShowResetDialog(true);
+                }}
+              />
+            </Menu>
+          </View>
         </View>
+        
+        {/* Render reset dialog */}
+        {renderResetDialog()}
 
         <JsonItemTable
           items={items}
@@ -180,6 +296,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  buttonsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   scanButton: {
     alignSelf: 'flex-end',
